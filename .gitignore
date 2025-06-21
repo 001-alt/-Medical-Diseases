@@ -1,0 +1,22 @@
+# 添加忽略规则（复制以下内容到.gitignore文件）
+cat << 'EOF' >> .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info
+.pytest_cache/
+venv/
+# IDE
+.idea/
+.vscode/
+.DS_Store
+# Node.js
+node_modules/
+dist/
+build/
+npm-debug.log*
+# Front-end
+*.log
+*.tmp
+*.temp
+EOF
