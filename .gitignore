@@ -1,22 +1,39 @@
-# 添加忽略规则（复制以下内容到.gitignore文件）
-cat << 'EOF' >> .gitignore
-# Python
+# === Python ===
 __pycache__/
 *.py[cod]
 *.egg-info
 .pytest_cache/
 venv/
-# IDE
+*.pkl  # 适用于所有目录的pkl文件
+*.png  # 适用于生成的图表文件
+
+# === IDE/编辑器 ===
 .idea/
 .vscode/
 .DS_Store
-# Node.js
+*.swp
+
+# === Node.js/前端 ===
 node_modules/
 dist/
 build/
 npm-debug.log*
-# Front-end
 *.log
 *.tmp
 *.temp
-EOF
+.cache/
+.env.local
+.env*.local
+
+# === 项目特定路径 ===
+# 前端模板
+front-end-template-1-master/node_modules/
+front-end-template-1-master/dist/
+front-end-template-1-master/.env.local
+
+# 爬虫/数据
+spiders/*.csv
+spiders/chromedriver.exe  # 建议在README中说明安装方式
+
+# === 例外规则（取消忽略某些必须文件） ===
+!machine/model/README.md  # 假设这里需要保留描述文件
