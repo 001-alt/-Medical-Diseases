@@ -1,75 +1,50 @@
-﻿import os
 from flask import Flask, request, jsonify
+from machine.tree import *
+from utils.getPublicData import *
+from utils.getAllData import *
 import bcrypt
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-from utils.query import *
+from utils.query import *  # 确保这个模块中有数据库操作相关函数
 import logging
 from flask_jwt_extended import (
     JWTManager, create_access_token,
     jwt_required, get_jwt_identity
 )
-
-# 处理 machine.tree 导入（云端可能不可用）
-try:
-    from machine.tree import *
-    HAS_ML = True
-except Exception:
-    HAS_ML = False
-
-# 处理数据导入
-try:
-    from utils.getPublicData import *
-    from utils.getAllData import *
-    HAS_DATA = True
-except Exception:
-    try:
-        from utils.getPublicData_no_ml import *
-        from utils.getAllData_no_ml import *
-        HAS_DATA = True
-    except Exception:
-        HAS_DATA = False
-
 app = Flask(__name__)
 
-# 数据库连接配置（从环境变量读取）
-DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', 'localhost'),
-    'user': os.environ.get('DB_USER', 'root'),
-    'password': os.environ.get('DB_PASSWORD', 'root'),
-    'database': os.environ.get('DB_NAME', 'medicalinfo'),
-    'port': int(os.environ.get('DB_PORT', 3306)),
-    'charset': 'utf8mb4'
-}
-
-connection = pymysql.connect(**DB_CONFIG)
+# 数据库连接配置
+connection = pymysql.connect(
+    host='localhost',
+    user='root',
+    password='root',
+    database='medicalinfo',
+    port=3306,
+    charset='utf8mb4'
+)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 配置 CORS（云端放开）
-CORS(app, resources={r"/*": {"origins": os.environ.get('CORS_ORIGINS', '*')}})
+# 配置 CORS
+CORS(app, resources={r"/*": {"origins": "http://localhost:8080"}})
 
 # JWT 配置
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'medical-disease-jwt-secret-2024')
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # 更换为您的密钥
 jwt = JWTManager(app)
+
+# 设置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @app.route('/')
 def hello_world():
-    return jsonify({
-        'message': 'Medical Disease Analysis API',
-        'version': '1.0',
-        'status': 'running',
-        'has_ml': HAS_ML,
-        'has_data': HAS_DATA
-    })
+    return 'Hello World!'
 
 @app.route('/getHomeData', methods=['GET', 'POST'])
 def getHomeData():
     try:
-        if not HAS_DATA:
-            return jsonify({"code": 500, "message": "Data module not available", "data": {}}), 500
         pieData = getPieData()
         configOne = getConfigOne()
         casesData = list(getAllCasesData())
@@ -106,70 +81,118 @@ def getHomeData():
         })
     except Exception as e:
         logger.error(f"获取首页数据失败: {str(e)}")
-        return jsonify({"code": 500, "message": f"获取数据失败: {str(e)}", "data": {}}), 500
+        return jsonify({"code": 500, "message": "获取数据失败", "data": {}}), 500
 
 def save_prediction(input_text, prediction_result):
     try:
         with connection.cursor() as cursor:
+            # 插入数据的 SQL 语句
             sql = """
             INSERT INTO predictions (input_text, prediction_result)
             VALUES (%s, %s)
             """
+            # 执行插入操作
             cursor.execute(sql, (input_text, prediction_result))
-            connection.commit()
+            connection.commit()  # 提交事务
             logger.info("预测数据已成功插入到数据库。")
     except Exception as e:
         logger.error(f"插入数据时出错: {e}")
-        connection.rollback()
+        connection.rollback()  # 出现异常时回滚事务
 
 @app.route('/submitModel', methods=['GET', 'POST'])
 def submitModel():
     if request.method == 'POST':
-        if not HAS_ML:
-            return jsonify({'code': 500, 'message': 'ML model not available on cloud', 'data': {}})
         content = request.json.get('content', '')
         logger.info(f"Received content: {content}")
+        # 运行模型进行预测
         result, error = train_and_predict(content)
         if error:
-            return jsonify({'code': 500, 'message': error, 'data': {}})
+            return jsonify({
+                'code': 500,
+                'message': error,
+                'data': {}
+            })
+        # 保存输入和结果到数据库
         save_prediction(content, result)
         return jsonify({
             'code': 200,
             'message': 'success',
             'data': {
-                'inputContent': content,
-                'resultData': result
+                'inputContent': content,     # 返回输入内容
+                'resultData': result         # 返回预测结果
             }
         })
     else:
         return jsonify({'code': 200, 'message': 'success', 'data': {}})
 
+
 @app.route('/getPredictions', methods=['GET'])
 def get_predictions():
     try:
+        # 从数据库中查询预测结果，选择所需的字段
         predictions = querys('SELECT input_text, prediction_result, created_at FROM predictions', [], 'select')
+        # 处理查询结果，转化为返回格式
         result_data = []
         for prediction in predictions:
             result_data.append({
-                'input_text': prediction[0],
-                'prediction_result': prediction[1],
-                'created_at': str(prediction[2]) if prediction[2] else None
+                'input_text': prediction[0],  # input_text 在第一列
+                'prediction_result': prediction[1],  # prediction_result 在第二列
+                'created_at': prediction[2].isoformat()  # created_at 在第三列，转换为 ISO 8601 格式字符串
             })
-        return jsonify({'code': 200, 'message': 'success', 'data': result_data})
+        return jsonify({
+            'code': 200,
+            'message': 'success',
+            'data': result_data
+        })
     except Exception as e:
-        logger.error(f"获取预测数据失败: {str(e)}")
-        return jsonify({"code": 500, "message": str(e), "data": []}), 500
+        logger.error(f"Error fetching predictions: {e}")
+        return jsonify({
+            'code': 500,
+            'message': 'Failed to fetch predictions',
+            'data': {}
+        })
+
+@app.route('/tableData', methods=['GET', 'POST'])
+def tableData():
+    try:
+        tableDataList = getAllCasesData()
+        # 只获取前500行数据
+        resultData = [x[1:] for x in tableDataList][:500]
+        logger.info(f"返回表格数据: {resultData}")
+        return jsonify({
+            'code': 200,
+            'message': 'success',
+            'data': {
+                'resultData': resultData
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取表格数据失败: {str(e)}")
+        return jsonify({"code": 500, "message": "获取数据失败", "data": {}}), 500
 
 @app.route('/getAllUsers', methods=['GET'])
 def getAllUsers():
     try:
         users = getUserData()
         if not users:
-            return jsonify({"status": "success", "message": "没有找到用户数据", "users": []})
-        return jsonify({"status": "success", "message": "获取用户数据成功", "users": users})
+            return jsonify({
+                "status": "success",
+                "message": "没有找到用户数据",
+                "users": []
+            })
+
+        return jsonify({
+            "status": "success",
+            "message": "获取用户数据成功",
+            "users": users
+        })
     except Exception as e:
         logger.error(f"获取用户数据失败: {str(e)}")
-        return jsonify({"status": "error", "message": f"获取用户数据失败: {str(e)}", "users": []})
+        return jsonify({
+            "status": "error",
+            "message": f"获取用户数据失败: {str(e)}",
+            "users": []
+        })
 
 @app.route('/addUser', methods=['POST'])
 def add_user():
@@ -185,11 +208,12 @@ def add_user():
     hashed_password = generate_password_hash(password)
     try:
         user_id = addUser(name, hashed_password, email, gender)
-        log_operation(user_id, "添加用户", f"用户 {name} 被添加")
+        log_operation(user_id, "添加用户", f"用户 {name} 被添加.")
         return jsonify({"status": "success", "message": "用户添加成功"}), 201
     except Exception as e:
         logger.error(f"添加用户失败: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/updateUser/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
@@ -203,8 +227,9 @@ def update_user(user_id):
         user = getUserById(user_id)
         if user is None:
             return jsonify({"status": "error", "message": "用户未找到"}), 404
+
         updateUser(user_id, username=username, password=generate_password_hash(password), email=email, gender=gender)
-        log_operation(user_id, "更新用户", f"用户 {user_id} 信息已更新")
+        log_operation(user_id, "更新用户", f"用户 {user_id} 信息已更新.")
         return jsonify({"status": "success", "message": "用户信息更新成功"}), 200
     except Exception as e:
         logger.error(f"更新用户失败: {str(e)}")
@@ -216,8 +241,9 @@ def delete_user(user_id):
         user = getUserById(user_id)
         if user is None:
             return jsonify({"status": "error", "message": "用户未找到"}), 404
+
         deleteUser(user_id)
-        log_operation(user_id, "删除用户", f"用户 {user_id} 被删除")
+        log_operation(user_id, "删除用户", f"用户 {user_id} 被删除.")
         return jsonify({"status": "success", "message": "用户删除成功"}), 200
     except Exception as e:
         logger.error(f"删除用户失败: {str(e)}")
@@ -255,18 +281,28 @@ def get_operation_logs():
     try:
         logs_data = getAllOperationLogs()
         if logs_data['status'] == 'success':
-            return jsonify({'status': 'success', 'message': '获取日志成功', 'logs': logs_data['logs']})
+            return jsonify({
+                'status': 'success',
+                'message': '获取日志成功',
+                'logs': logs_data['logs']
+            })
         else:
             return jsonify(logs_data), 500
     except Exception as e:
         logger.error(f"获取操作日志失败: {str(e)}")
-        return jsonify({"status": "error", "message": f"获取操作日志失败: {str(e)}", "logs": []}), 500
+        return jsonify({
+            "status": "error",
+            "message": f"获取操作日志失败: {str(e)}",
+            "logs": []
+        }), 500
 
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+# 确保在应用关闭时关闭数据库连接
 @app.teardown_appcontext
 def close_connection(exception):
     if connection:
         connection.close()
-
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
