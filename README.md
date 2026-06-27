@@ -190,4 +190,4 @@ npm run serve
 
 ## 📄 License
 
-MIT © [001-alt](https://github.com/001-alt)
+ © [001-alt](https://github.com/001-alt)
