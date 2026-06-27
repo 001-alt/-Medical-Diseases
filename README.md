@@ -24,7 +24,6 @@
 ### 🌐 在线体验
 
 > **前端已部署**：[https://medical-diseases.vercel.app](https://medical-diseases.vercel.app)  
-> 后端 API 需本地启动后配合使用（详见下方 [快速开始](#-快速开始)）
 
 ---
 
