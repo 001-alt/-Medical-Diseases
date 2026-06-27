@@ -7,6 +7,10 @@
   <img src="https://img.shields.io/badge/MySQL-8.0-orange?logo=mysql" alt="MySQL">
   <img src="https://img.shields.io/badge/Scikit--learn-1.3-yellow?logo=scikitlearn" alt="Scikit-learn">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <br>
+  <a href="https://medical-diseases.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_在线演示-Vercel-black?logo=vercel" alt="Online Demo">
+  </a>
 </p>
 
 ---
@@ -16,6 +20,11 @@
 基于 **Flask + Vue.js + MySQL** 的综合性医疗大数据分析平台，集成网络爬虫、机器学习预测与可视化仪表盘，辅助医疗机构洞察疾病趋势、优化诊疗决策。
 
 > ✨ 核心亮点：自动化数据采集 → 智能分析建模 → 多维度可视化 → 用户权限管理，一站式闭环。
+
+### 🌐 在线体验
+
+> **前端已部署**：[https://medical-diseases.vercel.app](https://medical-diseases.vercel.app)  
+> 后端 API 需本地启动后配合使用（详见下方 [快速开始](#-快速开始)）
 
 ---
 
@@ -96,13 +105,19 @@ pip install -r requirements.txt
 CREATE DATABASE IF NOT EXISTS medicalinfo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
+然后用 `schema.sql` 建表：
+
+```bash
+mysql -u root -p medicalinfo < schema.sql
+```
+
 修改 `app.py` 和 `utils/query.py` 中的数据库连接信息：
 
 ```python
 connection = pymysql.connect(
     host='localhost',
     user='root',
-    password='你的密码',  # ← 改为你的 MySQL 密码
+    password='你的密码',
     database='medicalinfo',
     port=3306,
     charset='utf8mb4'
@@ -131,6 +146,18 @@ npm run serve
 
 ---
 
+## 🌍 云端部署
+
+| 平台 | 用途 | 状态 |
+|------|------|------|
+| [Vercel](https://medical-diseases.vercel.app) | 前端静态托管 | ✅ 已上线 |
+| Render | 后端 API 服务 | 📋 已配置 Procfile |
+| PlanetScale / Railway | 云数据库 | 📋 待部署 |
+
+> 部署配置文件已就绪：`Procfile`、`requirements_cloud.txt`、`runtime.txt`。直接导入 GitHub 仓库即可一键部署。
+
+---
+
 ## 🔑 默认管理员
 
 | 角色 | 用户名 | 密码 |
@@ -144,10 +171,15 @@ npm run serve
 ## 📁 项目结构
 
 ```
-├── app.py                  # Flask 主入口
-├── requirements.txt        # Python 依赖清单
+├── app.py                  # Flask 主入口（支持环境变量）
+├── app_local.py            # 本地开发版备份
+├── Procfile                # Render 部署配置
+├── runtime.txt             # Python 版本声明
+├── schema.sql              # 数据库建表语句
+├── requirements.txt        # Python 依赖（本地）
+├── requirements_cloud.txt  # Python 依赖（云端，含 Gunicorn）
 ├── utils/                  # 工具函数
-│   ├── query.py            # 数据库操作封装
+│   ├── query.py            # 数据库操作封装（环境变量支持）
 │   ├── getAllData.py       # 数据分析函数
 │   └── getPublicData.py    # 公共数据查询
 ├── machine/                # 机器学习模块
@@ -158,36 +190,26 @@ npm run serve
 │   ├── spiderMain.py       # 主爬虫
 │   └── chromedriver.exe    # Chrome 驱动
 ├── templates/              # Flask 模板页
-├── front-end-template-1-master/  # Vue.js 前端
-│   ├── src/views/          # 页面组件
-│   ├── src/components/     # 通用组件
-│   └── src/router/         # 路由配置
-└── env/                    # Conda 虚拟环境（Git 忽略）
+└── front-end-template-1-master/  # Vue.js 前端
+    ├── src/views/          # 页面组件
+    ├── src/components/     # 通用组件
+    └── src/router/         # 路由配置
 ```
 
 ---
 
-## 🖼️ 功能截图
+## 🔮 规划
 
-> *启动项目后在此处放置界面截图*
-
-- 首页数据大屏：年龄分布饼图、性别比例、疾病词云
-- 病例数据表格：分页浏览、Excel 导出
-- 机器学习预测：输入症状文本，输出疾病类型预测
-- 用户管理：增删改查、角色分配、操作日志
-
----
-
-## 🔮 待规划
-
-- [ ] 集成深度学习模型（LSTM / Transformer）提升预测精度
-- [ ] Docker 容器化部署
-- [ ] 移动端适配优化
-- [ ] 数据导出支持 PDF / Word 格式
-- [ ] CI/CD 自动化测试与部署
+- [x] GitHub 仓库托管
+- [x] Vercel 前端部署
+- [ ] 后端 API 云端部署
+- [ ] 云数据库接入
+- [ ] 集成深度学习模型（LSTM / Transformer）
+- [ ] Docker 容器化
+- [ ] CI/CD 自动化
 
 ---
 
 ## 📄 License
 
- © [001-alt](https://github.com/001-alt)
+MIT © [001-alt](https://github.com/001-alt)
