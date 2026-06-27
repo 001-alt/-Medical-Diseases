@@ -1,0 +1,18 @@
+﻿# conda environment
+env/
+
+# Node
+front-end-template-1-master/node_modules/
+front-end-template-1-master/dist/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
