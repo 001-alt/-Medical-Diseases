@@ -21,6 +21,12 @@
 
 > ✨ 核心亮点：自动化数据采集 → 智能分析建模 → 多维度可视化 → 用户权限管理，一站式闭环。
 
+### 🖥️ 界面展示
+
+| 系统首页 | 数据可视化大屏 |
+| --- | --- |
+| ![系统首页](docs/images/medical-diseases-home.png) | ![数据可视化大屏](docs/images/medical-diseases-dashboard.png) |
+
 ### 🌐 在线体验
 
 > **前端已部署**：[https://medical-diseases.vercel.app](https://medical-diseases.vercel.app)  
